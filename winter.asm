@@ -7,7 +7,7 @@
     .word nmi, reset, irq
 
 .segment "ZEROPAGE"
-
+; GLOBAL VARS
 ; what mode the game engine is in
 engine_mode:	.res 1
 
