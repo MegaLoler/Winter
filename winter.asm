@@ -94,7 +94,7 @@ entities:	.res $100	; entity table
 .endmacro
 
 .macro	enable_ppu
-	lda #$18	; enable bg+sprites
+	lda #$1e	; enable bg+sprites
 	sta $2001
 	lda #$88	; enable nmi+sprite second chr page
 	sta $2000
@@ -169,7 +169,7 @@ entities:	.res $100	; entity table
 .endmacro
 
 ; this macro spawns an entity into the entity table at X
-.macro	spawn type, state, x_pos, y_pos
+.macro	spawn type, state, x_pos, y_pos, x_vel, y_vel
 	; write this entity's data
 	lda type
 	sta entities+0, x
@@ -179,9 +179,13 @@ entities:	.res $100	; entity table
 	sta entities+2, x
 	lda y_pos
 	sta entities+3, x
+	lda x_vel
+	sta entities+4, x
+	lda y_vel
+	sta entities+5, x
 	txa
 	clc
-	adc #$4
+	adc #$6
 	tax
 .endmacro
 
@@ -218,12 +222,12 @@ entities:	.res $100	; entity table
 
 	; first find the end of the entity table
 	ldx 0
-	spawn #1, #0, #$30, #$30
-	spawn #2, #0, #$40, #$30
-	spawn #3, #0, #$42, #$40
-	spawn #4, #0, #$30, #$50
-	spawn #5, #0, #$40, #$50
-	spawn #6, #0, #$42, #$60
+	spawn #1, #0, #$30, #$30, #$00, #$00
+	spawn #2, #0, #$40, #$30, #$01, #$00
+	spawn #3, #0, #$42, #$40, #$00, #$01
+	spawn #4, #0, #$30, #$50, #$00, #$00
+	spawn #5, #0, #$40, #$50, #$FF, #$00
+	spawn #6, #0, #$42, #$60, #$00, #$FE
 
 	enable_ppu
 .endmacro
@@ -426,21 +430,35 @@ draw_entity:
 @skip8:
 	rts
 
-.macro	draw_entities
+.macro	iterate_entities
 	; compile the oam from the entities table
 	clear_oam
+
 	; draw all the 64 entities in the table
 	ldx #$00		; entity pointer
 	ldy #$00		; oam destination
 @loop:
+	; draw it
 	jsr draw_entity
+
+	; update positions by velocities
+	lda entities+2, x		; get x velocity
+	clc
+	adc entities+4, x		; update x position
+	sta entities+2, x
+	lda entities+3, x		; get y velocity
+	clc
+	adc entities+5, x		; update y position
+	sta entities+3, x
+
 	; next entity...
 	txa
 	clc
-	adc #$4
+	adc #$6
 	tax
+
 	; full circle?
-	cmp #0
+	cmp #2
 	bne @loop
 .endmacro
 
@@ -456,7 +474,7 @@ in_game:
 	inc notes_pal	; TODO: software timer this to be slower...
 
 	; prepare for next frame (less timing critical stuff)
-	draw_entities
+	iterate_entities
 
 	; done foole
 	rti
