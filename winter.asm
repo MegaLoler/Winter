@@ -99,14 +99,38 @@ engine_mode:	.res 1
 	sta engine_mode
 .endmacro
 
+.macro	set_scroll x_scroll, y_scroll
+	; reset scroll address latch by reading status
+	lda $2002
+	; write x scroll
+	lda x_scroll
+	sta $2005
+	; write y scroll
+	lda y_scroll
+	sta $2005
+.endmacro
+
 
 
 
 ;; ENGINE MODES ;;
 
+; entering the title screen will init the whole system as well...basicaly
+.macro enter_title_screen
+	disable_ppu
+	vblank_wait
+	clear_ram
+	; TODO: init apu
+	set_game_state #0
+	vblank_wait
+	load_bg_pal bg_pal_00
+	load_bg nt_00
+	enable_ppu
+.endmacro
+
 ; routines for each game mode
 mode_jump_table:
-	.word enter_title_screen
+	.word title_screen
 
 ; subroutine to jump to appropriate handler
 ; indexed by A
@@ -125,8 +149,11 @@ jump_mode:
 	; jump!
 	rti
 
-; enter title screen mode
-enter_title_screen:
+	; done
+	rts
+
+; title screen mode
+title_screen:
 	rts
 
 
@@ -157,18 +184,11 @@ reset:
 	ldx #$ff
 	txs
 
-	disable_ppu
-	vblank_wait
-	clear_ram
-	; TODO: init apu
-	set_game_state #$00
-	vblank_wait
-	load_bg_pal bg_pal_00
-	load_bg nt_01
-	enable_ppu
+	; start the game in the title screen
+	enter_title_screen
 	
+; do nothing forever
 @forever:
-	; do nothing forever
 	jmp @forever
 
 
