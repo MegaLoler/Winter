@@ -12,6 +12,7 @@
 ; what mode the game engine is in
 engine_mode:	.res 1
 level_pal:	.res 1
+notes_pal:	.res 1
 
 .segment "CODE"
 
@@ -51,6 +52,21 @@ level_pal:	.res 1
 	lda #$3f
 	sta $2006
 	lda #$00
+	sta $2006
+	ldx #$0
+:
+	lda addr, x
+	sta $2007
+	inx
+	cpx #$10
+	bne :-
+.endmacro
+
+.macro	load_fg_pal addr
+	lda $2002
+	lda #$3f
+	sta $2006
+	lda #$10
 	sta $2006
 	ldx #$0
 :
@@ -105,6 +121,11 @@ level_pal:	.res 1
 	sta level_pal
 .endmacro
 
+.macro	set_notes_pal pal
+	lda pal
+	sta notes_pal
+.endmacro
+
 .macro	set_scroll x_scroll, y_scroll
 	; reset scroll address latch by reading status
 	lda $2002
@@ -140,6 +161,7 @@ level_pal:	.res 1
 	set_game_state #1
 	vblank_wait
 	set_level_pal #2
+	set_notes_pal #0
 	load_bg nt_02
 	enable_ppu
 .endmacro
@@ -196,11 +218,32 @@ update_level_pal:
 @skip3:
 	rts
 
+; update the notes palette
+update_notes_pal:
+	lda notes_pal
+	and #3
+	cmp #0
+	bne @skip0
+	load_fg_pal notes_pal_0
+	rts
+@skip0:
+	cmp #1
+	bne @skip1
+	load_fg_pal notes_pal_1
+	rts
+@skip1:
+	cmp #2
+	bne @skip2
+	load_fg_pal notes_pal_2
+@skip2:
+	rts
+
 ; in game logic
 in_game:
 	disable_ppu
+	jsr update_notes_pal
 	jsr update_level_pal
-	inc level_pal
+	inc notes_pal
 	set_scroll #0, #0
 	enable_ppu
 	rti
@@ -248,6 +291,9 @@ bg_pal_gold:	.incbin "gold.pal"
 bg_pal_pink:	.incbin "pink.pal"
 bg_pal_orange:	.incbin "orange.pal"
 bg_pal_blue:	.incbin "blue.pal"
+notes_pal_0:	.incbin "notes1.pal"
+notes_pal_1:	.incbin "notes2.pal"
+notes_pal_2:	.incbin "notes3.pal"
 
 ; nametables
 nt_00:	.incbin "test1.nam"
