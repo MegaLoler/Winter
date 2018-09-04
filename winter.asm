@@ -11,6 +11,7 @@
 ; GLOBAL VARS
 ; what mode the game engine is in
 engine_mode:	.res 1
+level_pal:	.res 1
 
 .segment "CODE"
 
@@ -128,9 +129,20 @@ engine_mode:	.res 1
 	enable_ppu
 .endmacro
 
+.macro enter_game
+	disable_ppu
+	vblank_wait
+	set_game_state #1
+	vblank_wait
+	load_bg_pal bg_pal_gold
+	load_bg nt_02
+	enable_ppu
+.endmacro
+
 ; routines for each game mode
 mode_jump_table:
 	.word title_screen
+	.word in_game
 
 ; subroutine to jump to appropriate handler
 ; indexed by A
@@ -141,6 +153,7 @@ jump_mode:
 	; push high byte
 	lda mode_jump_table+1, x
 	pha
+	rti
 	; push low byte
 	lda mode_jump_table, x
 	pha
@@ -149,12 +162,16 @@ jump_mode:
 	; jump!
 	rti
 
-	; done
-	rts
-
 ; title screen mode
 title_screen:
-	rts
+	enter_game
+	rti
+
+; in game logic
+in_game:
+	load_bg_pal bg_pal_orange
+	set_scroll #0, #0
+	rti
 
 
 
@@ -165,10 +182,7 @@ title_screen:
 nmi:
 	; grab the current mode and jump to the appropriate handler
 	lda engine_mode
-	jsr jump_mode
-
-	; done
-	rti
+	jmp jump_mode
 
 ; for audio or somethin idk yet
 irq:
@@ -198,7 +212,12 @@ reset:
 
 ; palettes
 bg_pal_00:	.incbin "bg.pal"
+bg_pal_gold:	.incbin "gold.pal"
+bg_pal_pink:	.incbin "pink.pal"
+bg_pal_orange:	.incbin "orange.pal"
+bg_pal_blue:	.incbin "blue.pal"
 
 ; nametables
 nt_00:	.incbin "test1.nam"
 nt_01:	.incbin "test2.nam"
+nt_02:	.incbin "level.nam"
