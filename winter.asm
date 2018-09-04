@@ -7,12 +7,22 @@
 .segment "VECTORS"
     .word nmi, reset, irq
 
-.segment "ZEROPAGE"
+
+
+
 ; GLOBAL VARS
-; what mode the game engine is in
-engine_mode:	.res 1
-level_pal:	.res 1
-notes_pal:	.res 1
+oam = $200
+
+.segment "ZEROPAGE"
+engine_mode:	.res 1		; engine state
+level_pal:	.res 1		; bg palette index
+notes_pal:	.res 1		; fg palette index
+
+.segment "BSS"
+entities:	.res $100	; entity table
+
+
+
 
 .segment "CODE"
 
@@ -110,6 +120,15 @@ notes_pal:	.res 1
 	bne :-
 .endmacro
 
+.macro clear_entities
+	lda #0
+:
+	sta entities, x
+	inx
+	bne :-
+.endmacro
+
+
 .macro clear_oam
 	lda #$ff
 :
@@ -149,6 +168,23 @@ notes_pal:	.res 1
 	sta $2005
 .endmacro
 
+; this macro spawns an entity into the entity table at X
+.macro	spawn type, state, x_pos, y_pos
+	; write this entity's data
+	lda type
+	sta entities+0, x
+	lda state
+	sta entities+1, x
+	lda x_pos
+	sta entities+2, x
+	lda y_pos
+	sta entities+3, x
+	txa
+	clc
+	adc #$4
+	tax
+.endmacro
+
 
 
 
@@ -178,6 +214,17 @@ notes_pal:	.res 1
 	set_notes_pal #0
 	load_bg_pal bg_pal_gold
 	load_bg nt_02
+	clear_entities
+
+	; first find the end of the entity table
+	ldx 0
+	spawn #1, #0, #$30, #$30
+	spawn #2, #0, #$40, #$30
+	spawn #3, #0, #$42, #$40
+	spawn #4, #0, #$30, #$50
+	spawn #5, #0, #$40, #$50
+	spawn #6, #0, #$42, #$60
+
 	enable_ppu
 .endmacro
 
@@ -253,6 +300,150 @@ update_notes_pal:
 @skip2:
 	rts
 
+.macro	draw_eighth pal
+	lda entities+3, x		; get entity y position
+	sta oam+0, y			; store y position
+	clc
+	adc #$8				; offset second sprite
+	sta oam+4, y			; store y position
+
+	lda #$02			; tile number
+	sta oam+1, y			; store tile number
+	lda #$12			; tile number for second sprite
+	sta oam+5, y			; store tile number
+
+	lda pal				; palette index
+	sta oam+2, y			; store palette index
+	sta oam+6, y			; store palette index
+
+	lda entities+2, x		; get entity x position
+	sta oam+3, y			; store x position
+	sta oam+7, y			; store x position
+
+	; increment y by how many bytes of oam were used
+	tya
+	clc
+	adc #$8
+	tay
+.endmacro
+
+.macro	draw_pair pal
+	lda entities+3, x		; get entity y position
+	sta oam+0, y			; store y position
+	sta oam+4, y			; store y position
+	clc
+	adc #$8				; offset second sprite
+	sta oam+8, y			; store y position
+	sta oam+12, y			; store y position
+
+	lda #$03			; tile number
+	sta oam+1, y			; store tile number
+	lda #$04			; tile number for second sprite
+	sta oam+5, y			; store tile number
+	lda #$13			; tile number
+	sta oam+9, y			; store tile number
+	lda #$14			; tile number for second sprite
+	sta oam+13, y			; store tile number
+
+	lda pal				; palette index
+	sta oam+2, y			; store palette index
+	sta oam+6, y			; store palette index
+	sta oam+10, y			; store palette index
+	sta oam+14, y			; store palette index
+
+	lda entities+2, x		; get entity x position
+	sta oam+3, y			; store x position
+	sta oam+11, y			; store x position
+	clc
+	adc #$8				; offset second sprite
+	sta oam+7, y			; store x position
+	sta oam+15, y			; store x position
+
+	; increment y by how many bytes of oam were used
+	tya
+	clc
+	adc #$10
+	tay
+.endmacro
+
+.macro draw_do
+	draw_eighth #$3
+.endmacro
+
+.macro	draw_re
+	draw_eighth #$1
+.endmacro
+
+.macro	draw_mi
+	draw_eighth #$0
+.endmacro
+
+.macro draw_fa
+	draw_pair #$3
+.endmacro
+
+.macro	draw_sol
+	draw_pair #$1
+.endmacro
+
+.macro	draw_la
+	draw_pair #$0
+.endmacro
+
+; draw an entity from the entities table into oam
+; X = entity location
+; Y = oam location
+draw_entity:
+	lda entities+0, x		; get entity type
+	cmp #1
+	bne @skip3
+	draw_do
+	rts
+@skip3:
+	cmp #2
+	bne @skip4
+	draw_re
+	rts
+@skip4:
+	cmp #3
+	bne @skip5
+	draw_mi
+	rts
+@skip5:
+	cmp #4
+	bne @skip6
+	draw_fa
+	rts
+@skip6:
+	cmp #5
+	bne @skip7
+	draw_sol
+	rts
+@skip7:
+	cmp #6
+	bne @skip8
+	draw_la
+@skip8:
+	rts
+
+.macro	draw_entities
+	; compile the oam from the entities table
+	clear_oam
+	; draw all the 64 entities in the table
+	ldx #$00		; entity pointer
+	ldy #$00		; oam destination
+@loop:
+	jsr draw_entity
+	; next entity...
+	txa
+	clc
+	adc #$4
+	tax
+	; full circle?
+	cmp #0
+	bne @loop
+.endmacro
+
 ; in game logic
 in_game:
 	; picture stuff
@@ -264,57 +455,8 @@ in_game:
 	enable_ppu
 	inc notes_pal	; TODO: software timer this to be slower...
 
-	; game logic stuff
-	; this is a test sprite...
-	lda #$50
-	sta $200	; y pos
-	lda #$02
-	sta $201	; tile #
-	lda #0
-	sta $202	; palette
-	lda #$80
-	sta $203	; x pos
-	lda #$58
-	sta $204	; y pos
-	lda #$12
-	sta $205	; tile #
-	lda #0
-	sta $206	; palette
-	lda #$80
-	sta $207	; x pos
-	; this is another test sprite...
-	lda #$50
-	sta $208	; y pos
-	lda #$03
-	sta $209	; tile #
-	lda #3
-	sta $20a	; palette
-	lda #$90
-	sta $20b	; x pos
-	lda #$58
-	sta $20c	; y pos
-	lda #$13
-	sta $20d	; tile #
-	lda #3
-	sta $20e	; palette
-	lda #$90
-	sta $20f	; x pos
-	lda #$50
-	sta $210	; y pos
-	lda #$04
-	sta $211	; tile #
-	lda #3
-	sta $212	; palette
-	lda #$98
-	sta $213	; x pos
-	lda #$58
-	sta $214	; y pos
-	lda #$14
-	sta $215	; tile #
-	lda #3
-	sta $216	; palette
-	lda #$98
-	sta $217	; x pos
+	; prepare for next frame (less timing critical stuff)
+	draw_entities
 
 	; done foole
 	rti
