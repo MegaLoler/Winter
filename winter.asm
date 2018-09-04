@@ -84,9 +84,9 @@ notes_pal:	.res 1
 .endmacro
 
 .macro	enable_ppu
-	lda #$08	; enable bg
+	lda #$18	; enable bg+sprites
 	sta $2001
-	lda #$80	; enable nmi
+	lda #$88	; enable nmi+sprite second chr page
 	sta $2000
 .endmacro
 
@@ -97,11 +97,10 @@ notes_pal:	.res 1
 .endmacro
 	
 .macro	clear_ram
-	tax		; a = 0
+	lda #0
 :
 	sta $000, x
 	sta $100, x
-	sta $200, x
 	sta $300, x
 	sta $400, x
 	sta $500, x
@@ -109,6 +108,19 @@ notes_pal:	.res 1
 	sta $700, x
 	inx
 	bne :-
+.endmacro
+
+.macro clear_oam
+	lda #$ff
+:
+	sta $200, x
+	inx
+	bne :-
+.endmacro
+
+.macro oam_dma
+	lda #$02
+	sta $4014
 .endmacro
 
 .macro	set_game_state state
@@ -147,9 +159,11 @@ notes_pal:	.res 1
 	disable_ppu
 	vblank_wait
 	clear_ram
+	clear_oam
 	; TODO: init apu
 	set_game_state #0
 	vblank_wait
+	oam_dma
 	load_bg_pal bg_pal_00
 	load_bg nt_00
 	enable_ppu
@@ -191,7 +205,7 @@ jump_mode:
 
 ; title screen mode
 title_screen:
-	;enter_game
+	enter_game
 	rti
 
 ; update the level palatte accordingly
@@ -241,12 +255,68 @@ update_notes_pal:
 
 ; in game logic
 in_game:
+	; picture stuff
 	disable_ppu
 	jsr update_notes_pal
 	jsr update_level_pal
-	inc notes_pal
 	set_scroll #0, #0
+	oam_dma
 	enable_ppu
+	inc notes_pal	; TODO: software timer this to be slower...
+
+	; game logic stuff
+	; this is a test sprite...
+	lda #$50
+	sta $200	; y pos
+	lda #$02
+	sta $201	; tile #
+	lda #0
+	sta $202	; palette
+	lda #$80
+	sta $203	; x pos
+	lda #$58
+	sta $204	; y pos
+	lda #$12
+	sta $205	; tile #
+	lda #0
+	sta $206	; palette
+	lda #$80
+	sta $207	; x pos
+	; this is another test sprite...
+	lda #$50
+	sta $208	; y pos
+	lda #$03
+	sta $209	; tile #
+	lda #3
+	sta $20a	; palette
+	lda #$90
+	sta $20b	; x pos
+	lda #$58
+	sta $20c	; y pos
+	lda #$13
+	sta $20d	; tile #
+	lda #3
+	sta $20e	; palette
+	lda #$90
+	sta $20f	; x pos
+	lda #$50
+	sta $210	; y pos
+	lda #$04
+	sta $211	; tile #
+	lda #3
+	sta $212	; palette
+	lda #$98
+	sta $213	; x pos
+	lda #$58
+	sta $214	; y pos
+	lda #$14
+	sta $215	; tile #
+	lda #3
+	sta $216	; palette
+	lda #$98
+	sta $217	; x pos
+
+	; done foole
 	rti
 
 
