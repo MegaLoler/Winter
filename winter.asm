@@ -162,6 +162,7 @@ notes_pal:	.res 1
 	vblank_wait
 	set_level_pal #2
 	set_notes_pal #0
+	load_bg_pal bg_pal_gold
 	load_bg nt_02
 	enable_ppu
 .endmacro
@@ -190,7 +191,7 @@ jump_mode:
 
 ; title screen mode
 title_screen:
-	enter_game
+	;enter_game
 	rti
 
 ; update the level palatte accordingly
