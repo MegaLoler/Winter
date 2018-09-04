@@ -100,6 +100,11 @@ level_pal:	.res 1
 	sta engine_mode
 .endmacro
 
+.macro	set_level_pal pal
+	lda pal
+	sta level_pal
+.endmacro
+
 .macro	set_scroll x_scroll, y_scroll
 	; reset scroll address latch by reading status
 	lda $2002
@@ -134,7 +139,7 @@ level_pal:	.res 1
 	vblank_wait
 	set_game_state #1
 	vblank_wait
-	load_bg_pal bg_pal_gold
+	set_level_pal #2
 	load_bg nt_02
 	enable_ppu
 .endmacro
@@ -153,7 +158,6 @@ jump_mode:
 	; push high byte
 	lda mode_jump_table+1, x
 	pha
-	rti
 	; push low byte
 	lda mode_jump_table, x
 	pha
@@ -167,10 +171,38 @@ title_screen:
 	enter_game
 	rti
 
+; update the level palatte accordingly
+update_level_pal:
+	lda level_pal
+	and #3
+	cmp #0
+	bne @skip0
+	load_bg_pal bg_pal_gold
+	rts
+@skip0:
+	cmp #1
+	bne @skip1
+	load_bg_pal bg_pal_blue
+	rts
+@skip1:
+	cmp #2
+	bne @skip2
+	load_bg_pal bg_pal_pink
+	rts
+@skip2:
+	cmp #3
+	bne @skip3
+	load_bg_pal bg_pal_orange
+@skip3:
+	rts
+
 ; in game logic
 in_game:
-	load_bg_pal bg_pal_orange
+	disable_ppu
+	jsr update_level_pal
+	inc level_pal
 	set_scroll #0, #0
+	enable_ppu
 	rti
 
 
