@@ -16,6 +16,12 @@ oam = $200
 .segment "ZEROPAGE"
 engine_mode:	.res 1		; engine state
 level_pal:	.res 1		; bg palette index
+tmp:		.res 1		; tmp var???
+x_pos:		.res 1		; mirror of player x
+y_pos:		.res 1		; mirror of player y
+tile_under:	.res 1		; the tile under the player
+nt_addr:	.res 2		; address of currently loaded nametable
+tmp_addr:	.res 2		; tmp 16 bit var
 
 .segment "BSS"
 entities:	.res $100	; entity table
@@ -26,6 +32,14 @@ entities:	.res $100	; entity table
 .segment "CODE"
 
 ;; UTILITY MACROS ;;
+
+.macro load_level addr
+	lda #.lobyte(addr)
+	sta nt_addr
+	lda #.hibyte(addr)
+	sta nt_addr+1
+	load_bg addr
+.endmacro
 
 .macro	load_bg addr
 	lda $2002
@@ -213,18 +227,18 @@ entities:	.res $100	; entity table
 	set_level_pal #2
 	load_fg_pal sprites_pal
 	load_bg_pal bg_pal_gold
-	load_bg nt_02
+	load_level nt_02
 	clear_entities
 
 	; first find the end of the entity table
 	ldx 0
+	spawn #7, #0, #$48, #$30, #$00, #$00
 	spawn #1, #0, #$30, #$30, #$00, #$00
 	spawn #2, #0, #$40, #$30, #$01, #$00
 	spawn #3, #0, #$42, #$40, #$00, #$01
 	spawn #4, #0, #$30, #$50, #$00, #$00
 	spawn #5, #0, #$40, #$50, #$FF, #$00
 	spawn #6, #0, #$42, #$60, #$00, #$FE
-	spawn #7, #0, #$48, #$b0, #$00, #$00
 
 	vblank_wait
 	enable_ppu
@@ -364,8 +378,11 @@ update_level_pal:
 	tay
 .endmacro
 
+; handles collisions too..........
 .macro	draw_player
+	; draw stuff
 	lda entities+3, x		; get entity y position
+	sta y_pos			; update the mirror
 	sta oam+0, y			; store y position
 	sta oam+4, y			; store y position
 	clc
@@ -398,12 +415,111 @@ update_level_pal:
 	sta oam+14, y			; store palette index
 
 	lda entities+2, x		; get entity x position
+	sta x_pos			; update the mirror
 	sta oam+3, y			; store x position
 	sta oam+11, y			; store x position
 	clc
 	adc #$8				; offset second sprite
 	sta oam+7, y			; store x position
 	sta oam+15, y			; store x position
+
+	; collisions
+	; check tile beneath player
+	; save regs
+	txa
+	pha
+	tya
+	pha
+
+	; get the tile beneath the player...
+	; get y pos and divide by 8 to get tile y coordinate
+	lda y_pos
+	clc
+	adc #$10		; 16 pixel height offset
+	ror
+	ror
+	ror
+	and #$1f
+	tay
+	; get x pos and divide by 8 to get tile x coordinate
+	lda x_pos
+	ror
+	ror
+	ror
+	and #$1f
+	sta tmp
+	; now x = X tile pos, and y = Y tile pos
+	; now get low bytes of tile index on X
+	tya
+	rol
+	rol
+	rol
+	rol
+	rol
+	and #$f8
+	clc
+	adc tmp
+	tax
+	; now get the high bytes on Y
+	tya
+	ror
+	ror
+	ror
+	and #$1f
+	tay
+
+	; add the base of the nametable in prg to the address
+	txa
+	clc
+	adc nt_addr
+	sta tmp_addr
+	tya
+	adc nt_addr+1
+	sta tmp_addr+1
+	; now the tile address is in tmp_addr
+	
+	; fetch from ppu
+	;lda $2002		; reset address latch
+	;tya
+	;sta $2006
+	;txa
+	;sta $2006
+	;lda $2007		; the tile
+	
+	ldy #0
+	lda (tmp_addr),y
+	sta tile_under		; save it ; )
+
+	; restore regs
+	pla
+	tay
+	pla
+	tax
+
+	; grab the handy dandy tile beneath us already provided...
+	lda tile_under
+	cmp #$af		; is it a solid tile?
+	bne @no_collide
+	lda #0
+	sta entities+5, x	; stop that silly goose
+	lda entities+3, x	; now gonna round off that y pos
+	and #$f8
+	sta entities+3, x
+	jmp @skip_grav
+@no_collide:
+
+	; gravity......
+	lda entities+7, x		; divide gravity...
+	and #7
+	cmp #0
+	bne @skip_grav
+	lda entities+5, x		; get entity y velocity
+	clc
+	adc #1				; gravity ?!?!?
+	cmp #$04			; max speed
+	beq @skip_grav
+	sta entities+5, x
+@skip_grav:
 
 	; increment y by how many bytes of oam were used
 	tya
@@ -472,9 +588,10 @@ draw_entity:
 	rts
 @skip8:
 	cmp #7
-	bne @skip9
-	draw_player
+	beq @skip9
+	rts
 @skip9:
+	draw_player
 	rts
 
 .macro	iterate_entities
@@ -517,6 +634,7 @@ draw_entity:
 	cmp #0
 	bne @loop
 .endmacro
+
 
 ; in game logic
 in_game:
