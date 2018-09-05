@@ -22,12 +22,14 @@ y_pos:		.res 1		; mirror of player y
 tile_under:	.res 1		; the tile under the player
 nt_addr:	.res 2		; address of currently loaded nametable
 tmp_addr:	.res 2		; tmp 16 bit var
+pad:		.res 1		; place to put the buttons! ^_^
 
 .segment "BSS"
 entities:	.res $100	; entity table
 
 
 
+;; WARNING: very bad code lol
 
 .segment "CODE"
 
@@ -200,6 +202,116 @@ entities:	.res $100	; entity table
 	tax
 .endmacro
 
+;; idk why im usin macros all over the place lol
+;; definitely not pretty code imo ;)
+read_pad:
+	; clear the pad var
+	lda #0
+	sta pad
+
+	; parrently gotta write these heres to latch the buttons on a shift register ? ?
+	lda #$01
+	sta $4016
+	lda #$00
+	sta $4016
+
+	; now read one button at a time bruh
+	lda $4016	; A
+	and #%00000001
+	ora pad
+	sta pad
+	lda $4016	; B
+	rol
+	and #%00000010
+	ora pad
+	sta pad
+	lda $4016	; select
+	rol
+	rol
+	and #%00000100
+	ora pad
+	sta pad
+	lda $4016	; start
+	rol
+	rol
+	rol
+	and #%00001000
+	ora pad
+	sta pad
+	lda $4016	; up
+	rol
+	rol
+	rol
+	rol
+	and #%00010000
+	ora pad
+	sta pad
+	lda $4016	; down
+	rol
+	rol
+	rol
+	rol
+	rol
+	and #%00100000
+	ora pad
+	sta pad
+	lda $4016	; left
+	rol
+	rol
+	rol
+	rol
+	rol
+	rol
+	and #%01000000
+	ora pad
+	sta pad
+	lda $4016	; right
+	rol
+	rol
+	rol
+	rol
+	rol
+	rol
+	rol
+	and #%10000000
+	ora pad
+	sta pad
+
+	; get outttt ;D
+	rts
+
+.macro	get_a
+	lda pad
+	and #%00000001
+.endmacro
+.macro	get_b
+	lda pad
+	and #%00000010
+.endmacro
+.macro	get_select
+	lda pad
+	and #%00000100
+.endmacro
+.macro	get_start
+	lda pad
+	and #%00001000
+.endmacro
+.macro	get_up
+	lda pad
+	and #%00010000
+.endmacro
+.macro	get_down
+	lda pad
+	and #%00100000
+.endmacro
+.macro	get_left
+	lda pad
+	and #%01000000
+.endmacro
+.macro	get_right
+	lda pad
+	and #%10000000
+.endmacro
 
 
 
@@ -268,6 +380,11 @@ jump_mode:
 
 ; title screen mode
 title_screen:
+	jsr read_pad
+	get_start
+	bne @niets
+	rti
+@niets:
 	enter_game
 	rti
 
@@ -498,7 +615,8 @@ update_level_pal:
 
 	; grab the handy dandy tile beneath us already provided...
 	lda tile_under
-	cmp #$af		; is it a solid tile?
+	jsr lookup_tile
+	cmp #$01
 	bne @no_collide
 	lda #0
 	sta entities+5, x	; stop that silly goose
@@ -509,10 +627,10 @@ update_level_pal:
 @no_collide:
 
 	; gravity......
-	lda entities+7, x		; divide gravity...
+	lda entities+7, x		; divide all acceleration
 	and #7
 	cmp #0
-	bne @skip_grav
+	bne @skip_accel
 	lda entities+5, x		; get entity y velocity
 	clc
 	adc #1				; gravity ?!?!?
@@ -521,12 +639,43 @@ update_level_pal:
 	sta entities+5, x
 @skip_grav:
 
+	; controls...
+	get_left
+	beq @skip_left
+	dec entities+4, x
+@skip_left:
+	get_right
+	beq @skip_right
+	inc entities+4, x
+@skip_right:
+	get_up
+	beq @skip_up
+	dec entities+5, x
+@skip_up:
+	get_down
+	beq @skip_down
+	inc entities+5, x
+@skip_down:
+@skip_accel:
+
 	; increment y by how many bytes of oam were used
 	tya
 	clc
 	adc #$10
 	tay
 .endmacro
+
+lookup_tile:
+	sta tmp
+	txa
+	pha
+	ldx tmp
+	lda tile_attrib, x
+	sta tmp	
+	pla
+	tax
+	lda tmp
+	rts
 
 .macro draw_do
 	draw_eighth #$3
@@ -647,6 +796,7 @@ in_game:
 	enable_ppu
 
 	; prepare for next frame (less timing critical stuff)
+	jsr read_pad
 	iterate_entities
 
 	; done foole
@@ -701,3 +851,6 @@ sprites_pal:	.incbin "sprites.pal"
 nt_00:	.incbin "test1.nam"
 nt_01:	.incbin "test2.nam"
 nt_02:	.incbin "level.nam"
+
+; tile attributes
+tile_attrib:	.incbin "attrib.bin"
