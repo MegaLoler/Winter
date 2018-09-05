@@ -224,7 +224,7 @@ entities:	.res $100	; entity table
 	spawn #4, #0, #$30, #$50, #$00, #$00
 	spawn #5, #0, #$40, #$50, #$FF, #$00
 	spawn #6, #0, #$42, #$60, #$00, #$FE
-	spawn #7, #0, #$60, #$80, #$00, #$00
+	spawn #7, #0, #$48, #$b0, #$00, #$00
 
 	vblank_wait
 	enable_ppu
@@ -374,7 +374,9 @@ update_level_pal:
 	sta oam+12, y			; store y position
 
 	lda entities+7, x		; tile number based on life timer
-	and #$c
+	and #$10
+	ror
+	ror
 	ror
 	clc
 	adc #$05			; initial tile number
@@ -389,7 +391,7 @@ update_level_pal:
 	adc #$01			; second tile number
 	sta oam+13, y			; store tile number
 
-	lda #2				; palette index
+	lda #0				; palette index
 	sta oam+2, y			; store palette index
 	sta oam+6, y			; store palette index
 	sta oam+10, y			; store palette index
