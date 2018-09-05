@@ -9,17 +9,23 @@ now it looks like some kinda platformer involving musical notes :DDDD
 
 ## How to Build
 
-u will need these: `ca65` and `ld65` and `make`
+u will need these:
+* `ca65`
+* `ld65`
+* `make`
 
-then run this: `make`
+then run this:
+```sh
+make
+```
 
 ## Directories
 
-`build/` where the .nes goes when you `make` it
-`src/` the source code yeah
-`cfg/` config files for the assembler
-`chr/` character rom files
-`pal/` color palettes
-`nam/` name tables
-`map/` level map data
-`bin/` misc binary files
+* `build/` where the .nes goes when you `make` it
+* `src/` the source code yeah
+* `cfg/` config files for the assembler
+* `chr/` character rom files
+* `pal/` color palettes
+* `nam/` name tables
+* `map/` level map data
+* `bin/` misc binary files
