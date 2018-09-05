@@ -177,6 +177,9 @@ entities:	.res $100	; entity table
 	sta entities+4, x
 	lda y_vel
 	sta entities+5, x
+	lda #0
+	sta entities+6, x
+	sta entities+7, x
 	txa
 	clc
 	adc #$8
@@ -370,13 +373,20 @@ update_level_pal:
 	sta oam+8, y			; store y position
 	sta oam+12, y			; store y position
 
-	lda #$05
+	lda entities+7, x		; tile number based on life timer
+	and #$c
+	ror
+	clc
+	adc #$05			; initial tile number
 	sta oam+1, y			; store tile number
-	lda #$06
+	clc
+	adc #$01			; second tile number
 	sta oam+5, y			; store tile number
-	lda #$15
+	clc
+	adc #$0f			; second tile number
 	sta oam+9, y			; store tile number
-	lda #$16
+	clc
+	adc #$01			; second tile number
 	sta oam+13, y			; store tile number
 
 	lda #2				; palette index
