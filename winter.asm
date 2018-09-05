@@ -16,7 +16,6 @@ oam = $200
 .segment "ZEROPAGE"
 engine_mode:	.res 1		; engine state
 level_pal:	.res 1		; bg palette index
-notes_pal:	.res 1		; fg palette index
 
 .segment "BSS"
 entities:	.res $100	; entity table
@@ -94,7 +93,7 @@ entities:	.res $100	; entity table
 .endmacro
 
 .macro	enable_ppu
-	lda #$1e	; enable bg+sprites
+	lda #$18	; enable bg+sprites
 	sta $2001
 	lda #$88	; enable nmi+sprite second chr page
 	sta $2000
@@ -152,11 +151,6 @@ entities:	.res $100	; entity table
 	sta level_pal
 .endmacro
 
-.macro	set_notes_pal pal
-	lda pal
-	sta notes_pal
-.endmacro
-
 .macro	set_scroll x_scroll, y_scroll
 	; reset scroll address latch by reading status
 	lda $2002
@@ -185,7 +179,7 @@ entities:	.res $100	; entity table
 	sta entities+5, x
 	txa
 	clc
-	adc #$6
+	adc #$8
 	tax
 .endmacro
 
@@ -213,9 +207,8 @@ entities:	.res $100	; entity table
 	disable_ppu
 	vblank_wait
 	set_game_state #1
-	vblank_wait
 	set_level_pal #2
-	set_notes_pal #0
+	load_fg_pal sprites_pal
 	load_bg_pal bg_pal_gold
 	load_bg nt_02
 	clear_entities
@@ -228,7 +221,9 @@ entities:	.res $100	; entity table
 	spawn #4, #0, #$30, #$50, #$00, #$00
 	spawn #5, #0, #$40, #$50, #$FF, #$00
 	spawn #6, #0, #$42, #$60, #$00, #$FE
+	spawn #7, #0, #$60, #$80, #$00, #$00
 
+	vblank_wait
 	enable_ppu
 .endmacro
 
@@ -284,26 +279,6 @@ update_level_pal:
 @skip3:
 	rts
 
-; update the notes palette
-update_notes_pal:
-	lda notes_pal
-	and #3
-	cmp #0
-	bne @skip0
-	load_fg_pal notes_pal_0
-	rts
-@skip0:
-	cmp #1
-	bne @skip1
-	load_fg_pal notes_pal_1
-	rts
-@skip1:
-	cmp #2
-	bne @skip2
-	load_fg_pal notes_pal_2
-@skip2:
-	rts
-
 .macro	draw_eighth pal
 	lda entities+3, x		; get entity y position
 	sta oam+0, y			; store y position
@@ -311,9 +286,16 @@ update_notes_pal:
 	adc #$8				; offset second sprite
 	sta oam+4, y			; store y position
 
-	lda #$02			; tile number
+	lda entities+7, x		; tile number based on life timer
+	and #$c
+	rol
+	rol
+	rol
+	clc
+	adc #$02			; initial tile number
 	sta oam+1, y			; store tile number
-	lda #$12			; tile number for second sprite
+	clc
+	adc #$10			; second tile number
 	sta oam+5, y			; store tile number
 
 	lda pal				; palette index
@@ -340,16 +322,64 @@ update_notes_pal:
 	sta oam+8, y			; store y position
 	sta oam+12, y			; store y position
 
-	lda #$03			; tile number
+	lda entities+7, x		; tile number based on life timer
+	and #$c
+	rol
+	rol
+	rol
+	clc
+	adc #$03			; initial tile number
 	sta oam+1, y			; store tile number
-	lda #$04			; tile number for second sprite
+	clc
+	adc #$01			; second tile number
 	sta oam+5, y			; store tile number
-	lda #$13			; tile number
+	clc
+	adc #$0f			; second tile number
 	sta oam+9, y			; store tile number
-	lda #$14			; tile number for second sprite
+	clc
+	adc #$01			; second tile number
 	sta oam+13, y			; store tile number
 
 	lda pal				; palette index
+	sta oam+2, y			; store palette index
+	sta oam+6, y			; store palette index
+	sta oam+10, y			; store palette index
+	sta oam+14, y			; store palette index
+
+	lda entities+2, x		; get entity x position
+	sta oam+3, y			; store x position
+	sta oam+11, y			; store x position
+	clc
+	adc #$8				; offset second sprite
+	sta oam+7, y			; store x position
+	sta oam+15, y			; store x position
+
+	; increment y by how many bytes of oam were used
+	tya
+	clc
+	adc #$10
+	tay
+.endmacro
+
+.macro	draw_player
+	lda entities+3, x		; get entity y position
+	sta oam+0, y			; store y position
+	sta oam+4, y			; store y position
+	clc
+	adc #$8				; offset second sprite
+	sta oam+8, y			; store y position
+	sta oam+12, y			; store y position
+
+	lda #$05
+	sta oam+1, y			; store tile number
+	lda #$06
+	sta oam+5, y			; store tile number
+	lda #$15
+	sta oam+9, y			; store tile number
+	lda #$16
+	sta oam+13, y			; store tile number
+
+	lda #2				; palette index
 	sta oam+2, y			; store palette index
 	sta oam+6, y			; store palette index
 	sta oam+10, y			; store palette index
@@ -427,14 +457,19 @@ draw_entity:
 	cmp #6
 	bne @skip8
 	draw_la
+	rts
 @skip8:
+	cmp #7
+	bne @skip9
+	draw_player
+@skip9:
 	rts
 
 .macro	iterate_entities
 	; compile the oam from the entities table
 	clear_oam
 
-	; draw all the 64 entities in the table
+	; draw all the 32 entities in the table
 	ldx #$00		; entity pointer
 	ldy #$00		; oam destination
 @loop:
@@ -451,14 +486,23 @@ draw_entity:
 	adc entities+5, x		; update y position
 	sta entities+3, x
 
+	; increment entity life timer
+	lda #1
+	clc
+	adc entities+7, x
+	sta entities+7, x
+	lda #0
+	adc entities+6, x
+	sta entities+6, x
+
 	; next entity...
 	txa
 	clc
-	adc #$6
+	adc #$8
 	tax
 
 	; full circle?
-	cmp #2
+	cmp #0
 	bne @loop
 .endmacro
 
@@ -466,12 +510,11 @@ draw_entity:
 in_game:
 	; picture stuff
 	disable_ppu
-	jsr update_notes_pal
+	load_fg_pal sprites_pal
 	jsr update_level_pal
 	set_scroll #0, #0
 	oam_dma
 	enable_ppu
-	inc notes_pal	; TODO: software timer this to be slower...
 
 	; prepare for next frame (less timing critical stuff)
 	iterate_entities
@@ -522,9 +565,7 @@ bg_pal_gold:	.incbin "gold.pal"
 bg_pal_pink:	.incbin "pink.pal"
 bg_pal_orange:	.incbin "orange.pal"
 bg_pal_blue:	.incbin "blue.pal"
-notes_pal_0:	.incbin "notes1.pal"
-notes_pal_1:	.incbin "notes2.pal"
-notes_pal_2:	.incbin "notes3.pal"
+sprites_pal:	.incbin "sprites.pal"
 
 ; nametables
 nt_00:	.incbin "test1.nam"
