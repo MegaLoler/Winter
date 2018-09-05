@@ -1,5 +1,13 @@
-winter.nes: winter.o
-	ld65 -C nes.cfg -o winter.nes winter.o
+build/winter.nes: build/winter.o
+	ld65 -C cfg/nes.cfg -o build/winter.nes build/winter.o
 
-winter.o: winter.asm *.chr *.pal *.nam
-	ca65 winter.asm
+build/winter.o: src/winter.asm chr/* pal/* nam/* bin/*
+	ca65 -o build/winter.o \
+		--bin-include-dir chr \
+		--bin-include-dir pal \
+		--bin-include-dir nam \
+		--bin-include-dir bin \
+		src/winter.asm
+
+clean:
+	rm build/*
