@@ -19,8 +19,9 @@
 .endstruct
 
 .struct Level
-	; width in tiles of map
+	; dimensions of the map in metatiles
 	width		.byte
+	height		.byte
 
 	; all pointers
 	palette		.word
@@ -91,16 +92,15 @@ reset:
 ;; ASSETS ;;
 
 ; palettes
-bg_pal_title:	.incbin "title.pal"
-bg_pal_pink:	.incbin "pink.pal"
-bg_pal_blue:	.incbin "blue.pal"
-sprites_pal:	.incbin "sprites.pal"
+bg_pal_title:		.incbin "title.pal"
+bg_pal_pink:		.incbin "pink.pal"
+bg_pal_blue:		.incbin "blue.pal"
+sprites_pal:		.incbin "sprites.pal"
+sprites_pal_sharp:	.incbin "sprites_sharp.pal"
 
 ; nametables
 nt_title:	.incbin "title.nam"
-;nt_hud:	.incbin "hud.nam"
+nt_hud:		.incbin "hud.map"
 
 ; maps
 
-; tile attributes
-tile_attrib:	.incbin "attrib.bin"
