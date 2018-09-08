@@ -7,12 +7,8 @@
 .endstruct
 
 .struct Level
-	; dimensions of the map in metatiles
-	width		.byte
-	height		.byte
-
-	; all pointers
-	palette		.word
+	bg		.word
+	fg		.word
 	map		.word
 	entities	.word
 .endstruct

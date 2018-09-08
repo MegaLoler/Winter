@@ -21,6 +21,5 @@ cam_y:		.res 1
 cam_high:	.res 1	; high=x, low=y
 
 .segment "BSS"
-particles:	.res $100	; particle effect table
-entities:	.res $200	; entity table
-map:		.res $200	; loaded map
+entities:	.res $100	; entity table
+map:		.res $400	; loaded map

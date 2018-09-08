@@ -32,8 +32,6 @@
 ; levels
 .scope lvl
 	.scope test
-		width:		.byte 64
-		height:		.byte 32
 		bg:		.word pal::bg::pink
 		fg:		.word pal::fg::main
 		map:		.word map::test
