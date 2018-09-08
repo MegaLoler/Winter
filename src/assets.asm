@@ -32,10 +32,30 @@
 ; levels
 .scope lvl
 	test:
-	.scope test
-		bg:		.word pal::bg::blue
-		fg:		.word pal::fg::main
-		map:		.word map::test
-		entities:	.word ent::test
-	.endscope
+		.word pal::bg::blue
+		.word pal::fg::main
+		.word map::test
+		.word ent::test
 .endscope
+
+; metasprites
+.scope metasprites
+	table:
+		.word null, note00, note01, note02
+
+	null:
+		.byte $0
+	note00:
+		.byte $2
+		.byte $00, $a0, $00, $00
+		.byte $08, $b0, $00, $00
+	note01:
+		.byte $2
+		.byte $00, $c0, $00, $00
+		.byte $08, $d0, $00, $00
+	note02:
+		.byte $2
+		.byte $00, $e0, $00, $00
+		.byte $08, $f0, $00, $00
+.endscope
+
