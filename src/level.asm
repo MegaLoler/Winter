@@ -1,4 +1,5 @@
 ; setup the level screen
+; tmp3 = level address
 enter_level:
 	; disable ppu
 	lda #$00
@@ -9,15 +10,38 @@ enter_level:
 	lda #$01
 	sta state
 
-	; load the title screen nametable
+	; load the test background nametable
 	st16 tmp0, nt::test
 	jsr load_nametable
 
-	; load the color palettes
-	st16 tmp0, pal::fg::main
+	; load the sprite palette
+	ldy #Level::fg
+	lda (tmp3), y
+	sta tmp0
+	iny
+	lda (tmp3), y
+	sta tmp0+1
 	jsr load_fg_palette
-	st16 tmp0, pal::bg::pink
+
+	; load the bg palette
+	ldy #Level::bg
+	lda (tmp3), y
+	sta tmp0
+	iny
+	lda (tmp3), y
+	sta tmp0+1
 	jsr load_bg_palette
+
+	; load the entity table
+	ldy #Level::entities
+	lda (tmp3), y
+	sta tmp0
+	iny
+	lda (tmp3), y
+	sta tmp0+1
+	st16 tmp1, entities
+	st16 tmp2, $100
+	jsr copy
 
 	; reset scrolling
 	lda #$00

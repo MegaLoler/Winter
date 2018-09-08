@@ -58,7 +58,40 @@ clear_oam:
 	bne :-
 	rts
 
-; copy up to $100 bytes of data to ppu memory
+; copy a block of memory
+; tmp0 = source
+; tmp1 = destination
+; tmp2 = length
+copy:
+	; copy full pages first
+	ldx #$00	; page index
+	jmp @next_page
+:
+	ldy #$00	; byte index
+:
+	lda (tmp0), y
+	sta (tmp1), y
+	iny
+	bne :-	
+	inc tmp0+1	; next page
+	inx
+@next_page:
+	cpx tmp2+1
+	bne :--
+	
+	; copy the rest
+	ldy #$00	; byte index
+	jmp @next_byte
+:
+	lda (tmp0), y
+	sta (tmp1), y
+	iny
+@next_byte:
+	cpy tmp2
+	bne :-	
+	rts
+
+; copy a block of memory to the ppu
 ; tmp0 = source
 ; tmp1 = ppu destination
 ; tmp2 = length
@@ -72,7 +105,7 @@ copy_ppu:
 
 	; copy full pages first
 	ldx #$00	; page index
-	jmp next_page
+	jmp @next_page
 :
 	ldy #$00	; byte index
 :
@@ -82,18 +115,18 @@ copy_ppu:
 	bne :-	
 	inc tmp0+1	; next page
 	inx
-next_page:
+@next_page:
 	cpx tmp2+1
 	bne :--
 	
 	; copy the rest
 	ldy #$00	; byte index
-	jmp next_byte
+	jmp @next_byte
 :
 	lda (tmp0), y
 	sta ppudata
 	iny
-next_byte:
+@next_byte:
 	cpy tmp2
 	bne :-	
 	rts

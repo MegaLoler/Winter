@@ -69,6 +69,7 @@ title_handler:
 	beq :+
 	
 	; enter the first level
+	st16 tmp3, lvl::test
 	jsr enter_level
 :
 	rti

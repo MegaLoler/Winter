@@ -31,8 +31,9 @@
 
 ; levels
 .scope lvl
+	test:
 	.scope test
-		bg:		.word pal::bg::pink
+		bg:		.word pal::bg::blue
 		fg:		.word pal::fg::main
 		map:		.word map::test
 		entities:	.word ent::test
