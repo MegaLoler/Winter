@@ -49,6 +49,9 @@ state:		.res 1
 pad:		.res 1
 pad_press:	.res 1
 
+; timers
+global_timer:	.res 2
+
 ; 12 bit camera position coordinates
 cam_x:		.res 1
 cam_y:		.res 1
@@ -152,6 +155,7 @@ next_page:
 	bne :--
 	
 	; copy the rest
+	ldy #$00	; byte index
 	jmp next_byte
 :
 	lda (tmp0), y
@@ -213,19 +217,109 @@ enter_title_skip:
 	lda #$88
 	sta ppuctrl
 	lda #$08
-	sta ppumask
+	sta ppumask	; show bg only
+	rts
+
+; blank the "START" string on the title screen
+title_blank_start:
+	st16 tmp0, nt_title+$314
+	st16 tmp1, nt0+$2f4
+	st16 tmp2, $5
+	jmp copy_ppu	
+	rts
+
+; show the "START" string on the title screen
+title_show_start:
+	st16 tmp0, nt_title+$2f4
+	st16 tmp1, nt0+$2f4
+	st16 tmp2, $5
+	jmp copy_ppu	
 	rts
 
 ; handler for the title screen
 title_handler:
+	; blink the "START" string
+	lda global_timer
+	and #$20
+	bne :+
+	jsr title_blank_start
+	jmp :++
+:
+	jsr title_show_start
+:
+	; reset scrolling
+	lda #$00
+	sta ppuscroll
+	sta ppuscroll
+
+	; await the start button
+	lda pad_press
+	and #%00010000
+	beq :+
+	
+	; enter the first level
+	jsr enter_level
+:
+	rti
+
+; setup the level screen
+enter_level:
+	; disable ppu
+	lda #$00
+	sta ppuctrl
+	sta ppumask
+
+	; set the engine state
+	lda #$01
+	sta state
+
+	; load the title screen nametable
+	st16 tmp0, nt_bg_test
+	jsr load_nametable
+
+	; load the color palettes
+	st16 tmp0, sprites_pal
+	jsr load_fg_palette
+	st16 tmp0, bg_pal_pink
+	jsr load_bg_palette
+
+	; reset scrolling
+	lda #$00
+	sta ppuscroll
+	sta ppuscroll
+
+	; enable the ppu
+	lda #$88
+	sta ppuctrl
+	lda #$18	; show sprites and bg
+	sta ppumask
+	rts
+
+; handler for the level screen
+level_handler:
+	; await the start button
+	lda pad_press
+	and #%00010000
+	beq :+
+	
+	; return to the title screen
+	jsr enter_title
+:
 	rti
 
 ; engine state handler routines
 state_handler_table:
-.word	title_handler-1
+.word title_handler-1
+.word level_handler-1
 
 ; on vblank
 nmi:
+	; increment the global timer
+	inc global_timer
+	bne :+
+	inc global_timer+1
+:
+
 	; update the pad variables
 	jsr read_pad
 
@@ -289,6 +383,7 @@ sprites_pal_sharp:	.incbin "sprites_sharp.pal"
 
 ; nametables
 nt_title:		.incbin "title.nam"
+nt_bg_test:		.incbin "bgtest.nam"
 
 ; maps
 
