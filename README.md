@@ -23,6 +23,7 @@ make
 
 * `build/` where the .nes goes when you `make` it
 * `src/` the source code yeah
+* `inc/` include files for assembly
 * `cfg/` config files for the assembler
 * `chr/` character rom files
 * `pal/` color palettes

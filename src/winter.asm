@@ -1,3 +1,6 @@
+.include "nes.inc"
+.include "macros.inc"
+
 .segment "STARTUP" ; avoids warning
 .segment "HEADER"
     .byte "NES", 26, 2, 1 ; 32K PRG, 8K CHR
@@ -33,12 +36,14 @@
 
 
 .segment "ZEROPAGE"
-; engine state
-state:		.res 1
-
 ; scratch vars
 tmp0:		.res 2
 tmp1:		.res 2
+tmp2:		.res 2
+tmp3:		.res 2
+
+; engine state
+state:		.res 1
 
 ; buttons
 pad:		.res 1
@@ -57,9 +62,129 @@ map:		.res $200	; loaded map
 
 
 .segment "CODE"
-;; INTERRUPTS ;;
 
-; vsync
+; wait until vblank
+wait_vblank:
+	bit ppustatus
+	bpl wait_vblank
+	rts
+
+; initialize ram contents to 0
+clear_ram:
+	lda #$00
+	tax
+:
+	sta page0, x
+	; skip stack, because it contains return address lol
+	; skip oam page
+	sta page3, x
+	sta page4, x
+	sta page5, x
+	sta page6, x
+	sta page7, x
+	inx
+	bne :-
+	rts
+
+; initialize the oam contents to off the screen
+clear_oam:
+	ldx #$ff
+	txa	; a = $ff
+	inx	; x = 0
+:
+	sta oam, x
+	inx
+	bne :-
+	rts
+
+; copy nametable data to the ppu
+; tmp0 = address
+load_nametable:
+	ppulatch nt0
+	ldx #$04
+:
+	ldy #$00
+:
+	lda (tmp0), y
+	sta ppudata
+	iny
+	bne :-	
+	inc tmp0+1
+	dex
+	bne :--
+	rts
+
+; copy up to $100 bytes of data to ppu memory
+; tmp0 = source
+; tmp1 = ppu destination
+; tmp2 = length
+copy_ppu:
+	; latch the ppu address
+	bit ppustatus
+	lda tmp1+1
+	sta ppuaddr
+	lda tmp1
+	sta ppuaddr
+
+	; block copy the data
+	ldy #$00
+:
+	lda (tmp0), y
+	sta ppudata
+	iny
+	cpy tmp2
+	bne :-	
+	rts
+
+; copy a background palette into the ppu
+; tmp0 = address
+load_bg_palette:
+	st16 tmp1, palbg
+load_bg_palette_skip:
+	lda #$10
+	sta tmp2
+	jmp copy_ppu	
+
+; copy a foreground palette into the ppu
+; tmp0 = address
+load_fg_palette:
+	st16 tmp1, palfg
+	jmp load_bg_palette_skip	
+
+; setup the title screen
+enter_title:
+	; disable ppu
+	lda #$00
+	sta ppuctrl
+	sta ppumask
+
+; for entering the title screen when the ppu is already disabled
+enter_title_skip:
+	; set the engine state
+	lda #$00
+	sta state
+
+	; load the title screen nametable
+	st16 tmp0, nt_title
+	jsr load_nametable
+
+	; load the color palette
+	st16 tmp0, bg_pal_title
+	jsr load_bg_palette
+
+	; reset scrolling
+	lda #$00
+	sta ppuscroll
+	sta ppuscroll
+
+	; enable the ppu
+	lda #$88
+	sta ppuctrl
+	lda #$08
+	sta ppumask
+	rts
+
+; on vblank
 nmi:
 	; grab the current mode and jump to the appropriate handler
 	;lda engine_mode
@@ -79,10 +204,25 @@ reset:
 	ldx #$ff
 	txs
 
-	; start the game in the title screen
-	;enter_title_screen
+	; disable ppu
+	inx	; x = 0
+	stx ppuctrl
+	stx ppumask
+
+	; wait for vblank
+	jsr wait_vblank
+
+	; clear ram and oam
+	jsr clear_ram
+	jsr clear_oam
+
+	; wait for vblank once more
+	jsr wait_vblank
+
+	; and enter the title screen
+	jsr enter_title_skip
 	
-; do nothing forever
+	; do nothing forever
 :
 	jmp :-
 
@@ -99,8 +239,7 @@ sprites_pal:		.incbin "sprites.pal"
 sprites_pal_sharp:	.incbin "sprites_sharp.pal"
 
 ; nametables
-nt_title:	.incbin "title.nam"
-nt_hud:		.incbin "hud.map"
+nt_title:		.incbin "title.nam"
 
 ; maps
 
