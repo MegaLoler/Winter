@@ -28,9 +28,17 @@ ppuscroll	= $2005
 ppuaddr		= $2006
 ppudata		= $2007
 
+pulse1		= $4000
+pulse2		= $4004
+triangle	= $4008
+noise		= $400c
+dmc		= $4010
 oamdma		= $4014
+dmcctrl		= $4015
+dmcstat		= $4015
 pad1		= $4016
 pad2		= $4017
+framecounter	= $4017
 
 ; ppu
 

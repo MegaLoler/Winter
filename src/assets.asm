@@ -41,7 +41,7 @@
 ; metasprites
 .scope metasprites
 	table:
-		.word null, note00, note01, note02
+		.word null, note00, note01, note02, note10, note11, note12
 
 	null:
 		.byte $0
@@ -57,5 +57,23 @@
 		.byte $2
 		.byte $00, $e0, $00, $00
 		.byte $08, $f0, $00, $00
+	note10:
+		.byte $4
+		.byte $00, $a1, $00, $00
+		.byte $00, $a2, $00, $08
+		.byte $08, $b1, $00, $00
+		.byte $08, $b2, $00, $08
+	note11:
+		.byte $4
+		.byte $00, $c1, $00, $00
+		.byte $00, $c2, $00, $08
+		.byte $08, $d1, $00, $00
+		.byte $08, $d2, $00, $08
+	note12:
+		.byte $4
+		.byte $00, $e1, $00, $00
+		.byte $00, $e2, $00, $08
+		.byte $08, $f1, $00, $00
+		.byte $08, $f2, $00, $08
 .endscope
 

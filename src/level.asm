@@ -60,79 +60,98 @@ enter_level:
 	sta ppuscroll
 
 	; enable the ppu
-	lda #$88
+	lda #$88	; enable nmi and use second chr page for sprites
 	sta ppuctrl
 	lda #$18	; show sprites and bg
 	sta ppumask
 	rts
 
 ; draw a metasprite
-; x = metasprite index
-; y = oam pointer
-; tmp2 = x pos
-; tmp3 = y pos
+; a = metasprite index
+; x = oam pointer
+; tmp4 = xy pos
 draw_metasprite:
-	; get the pointer to the metasprite data from the table
-	txa
+	; get address of metasprite
 	asl
-	tax
-	lda metasprites::table, x
+	tay
+	lda metasprites::table, y
 	sta tmp0
-	lda metasprites::table+1, x
+	lda metasprites::table+1, y
 	sta tmp0+1
-	lda (tmp0)	; get sprite count
-	asl		; x4
+
+	; get the sprite count and multiply by four
+	ldy #$00
+	lda (tmp0), y
 	asl
-	sta tmp1
-	; now point to base of sprite array
+	asl	
+	sta tmp2
+
+	; point to the base of the array
 	inc tmp0
 	bne :+
 	inc tmp0+1
 :
-	; now copy sprites to oam
-	ldx #$00
+
+	; copy data
 :
-	lda tmp0, x	; y pos
+	; copy y pos
+	lda (tmp0), y
 	clc
-	adc tmp3	; add the provided offset
-	sta oam, y
-	iny
+	adc tmp4+1	; add y offset
+	sta oam, x
 	inx
-	lda tmp0, x	; char index
-	sta oam, y
 	iny
+	; copy char
+	lda (tmp0), y
+	sta oam, x
 	inx
-	lda tmp0, x	; attributes
-	sta oam, y
 	iny
+	; copy attributes
+	lda (tmp0), y
+	sta oam, x
 	inx
-	lda tmp0, x	; x pos
+	iny
+	; copy x pos
+	lda (tmp0), y
 	clc
-	adc tmp2	; add the provided offset
-	sta oam, y
-	iny
+	adc tmp4	; add x offset
+	sta oam, x
 	inx
-	cpx tmp1
-	bne :-
+	iny
+	; loop
+	cpy tmp2
+	bne :-	
+	
 	rts
 
 ; assembly oam from entity data
 draw_entities:
-	ldx #$01
-	ldy #$00
-	lda #$40
-	sta tmp2
-	sta tmp3
+	ldx #$00
+	st16 tmp4, $4030
+	lda #$01
+	jsr draw_metasprite
+	st16 tmp4, $3030
+	lda #$02
+	jsr draw_metasprite
+	st16 tmp4, $2030
+	lda #$03
+	jsr draw_metasprite
+	st16 tmp4, $1030
+	lda #$04
 	jsr draw_metasprite
 	rts
 
 ; handler for the level screen
 level_handler:
-	; update oam
+	; copy oam
+	lda #.lobyte(oam)
+	sta oamaddr
+	lda #.hibyte(oam)
+	sta oamdma
+
+	; update oam for next frame
 	jsr clear_oam
 	jsr draw_entities
-	lda .hibyte(oam)
-	sta oamdma
 
 	; await the start button
 	lda pad_press

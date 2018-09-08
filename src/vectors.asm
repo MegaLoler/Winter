@@ -29,14 +29,19 @@ reset:
 	sei
 	cld
 
+	; disable apu frame irq
+	ldx #$40
+	stx framecounter
+
 	; setup stack
 	ldx #$ff
 	txs
 
-	; disable ppu
+	; disable ppu and dmc irq
 	inx	; x = 0
 	stx ppuctrl
 	stx ppumask
+	stx dmc
 
 	; wait for vblank
 	jsr wait_vblank

@@ -4,6 +4,10 @@ tmp0:		.res 2
 tmp1:		.res 2
 tmp2:		.res 2
 tmp3:		.res 2
+tmp4:		.res 2
+tmp5:		.res 2
+tmp6:		.res 2
+tmp7:		.res 2
 
 ; engine state
 state:		.res 1
