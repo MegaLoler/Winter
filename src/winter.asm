@@ -63,6 +63,32 @@ map:		.res $200	; loaded map
 
 .segment "CODE"
 
+; read the current state of the buttons
+read_pad:
+	; store the previous pad state first
+	lda pad
+	sta pad_press
+
+	; read the continuous pad state
+	lda #$01
+	sta pad1	; enable pad strobe
+	sta pad		; shifted left onto carry to indicate done
+	lsr		; a = 0
+	sta pad1	; disable pad strobe
+:
+	lda pad1	; read pad
+	lsr		; shift button state onto carry
+	rol pad		; shift from carry into right side of pad register
+	bcc :-		; loop until done bit is shifted off the end
+
+	; now check for instantaneous presses
+	lda pad_press
+	eor pad		; mask for changes only
+	and pad		; keep only pressed changes
+	sta pad_press
+	
+	rts
+
 ; wait until vblank
 wait_vblank:
 	bit ppustatus
@@ -190,11 +216,28 @@ enter_title_skip:
 	sta ppumask
 	rts
 
+; handler for the title screen
+title_handler:
+	rti
+
+; engine state handler routines
+state_handler_table:
+.word	title_handler-1
+
 ; on vblank
 nmi:
-	; grab the current mode and jump to the appropriate handler
-	;lda engine_mode
-	;jmp jump_mode
+	; update the pad variables
+	jsr read_pad
+
+	; grab the current state and jump to the appropriate handler
+	lda state
+	asl
+	tax
+	lda state_handler_table+1, x	
+	pha
+	lda state_handler_table, x	
+	pha
+	rts
 
 ; for audio or somethin idk yet
 irq:

@@ -27,7 +27,10 @@ oamdata		= $2004
 ppuscroll	= $2005
 ppuaddr		= $2006
 ppudata		= $2007
+
 oamdma		= $4014
+pad1		= $4016
+pad2		= $4017
 
 ; ppu
 
