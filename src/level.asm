@@ -10,13 +10,13 @@ enter_level:
 	sta state
 
 	; load the title screen nametable
-	st16 tmp0, nt_bg_test
+	st16 tmp0, nt::test
 	jsr load_nametable
 
 	; load the color palettes
-	st16 tmp0, sprites_pal
+	st16 tmp0, pal::fg::main
 	jsr load_fg_palette
-	st16 tmp0, bg_pal_pink
+	st16 tmp0, pal::bg::pink
 	jsr load_bg_palette
 
 	; reset scrolling

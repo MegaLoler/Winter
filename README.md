@@ -29,4 +29,4 @@ make
 * `pal/` color palettes
 * `nam/` name tables
 * `map/` level map data
-* `bin/` misc binary files
+* `ent/` entity tables for levels

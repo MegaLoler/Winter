@@ -12,11 +12,11 @@ enter_title_skip:
 	sta state
 
 	; load the title screen nametable
-	st16 tmp0, nt_title
+	st16 tmp0, nt::title
 	jsr load_nametable
 
 	; load the color palette
-	st16 tmp0, bg_pal_title
+	st16 tmp0, pal::bg::title
 	jsr load_bg_palette
 
 	; reset scrolling
@@ -33,7 +33,7 @@ enter_title_skip:
 
 ; blank the "START" string on the title screen
 title_blank_start:
-	st16 tmp0, nt_title+$314
+	st16 tmp0, nt::title+$314
 	st16 tmp1, nt0+$2f4
 	st16 tmp2, $5
 	jmp copy_ppu	
@@ -41,7 +41,7 @@ title_blank_start:
 
 ; show the "START" string on the title screen
 title_show_start:
-	st16 tmp0, nt_title+$2f4
+	st16 tmp0, nt::title+$2f4
 	st16 tmp1, nt0+$2f4
 	st16 tmp2, $5
 	jmp copy_ppu	

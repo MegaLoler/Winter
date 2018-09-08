@@ -1,12 +1,42 @@
+.segment "CODE"
+
 ; palettes
-bg_pal_title:		.incbin "title.pal"
-bg_pal_pink:		.incbin "pink.pal"
-bg_pal_blue:		.incbin "blue.pal"
-sprites_pal:		.incbin "sprites.pal"
-sprites_pal_sharp:	.incbin "sprites_sharp.pal"
+.scope pal
+	.scope bg
+		title:		.incbin "title.pal"
+		pink:		.incbin "pink.pal"
+		blue:		.incbin "blue.pal"
+	.endscope
+	.scope fg
+		main:		.incbin "sprites.pal"
+		alt:		.incbin "sprites_sharp.pal"
+	.endscope
+.endscope
 
 ; nametables
-nt_title:		.incbin "title.nam"
-nt_bg_test:		.incbin "bgtest.nam"
+.scope nt
+	title:			.incbin "title.nam"
+	test:			.incbin "bgtest.nam"
+.endscope
 
 ; maps
+.scope map
+	test:			.incbin "test.map"
+.endscope
+
+; entity tables
+.scope ent
+	test:			.incbin "test.ent"
+.endscope
+
+; levels
+.scope lvl
+	.scope test
+		width:		.byte 64
+		height:		.byte 32
+		bg:		.word pal::bg::pink
+		fg:		.word pal::fg::main
+		map:		.word map::test
+		entities:	.word ent::test
+	.endscope
+.endscope
