@@ -97,23 +97,6 @@ clear_oam:
 	bne :-
 	rts
 
-; copy nametable data to the ppu
-; tmp0 = address
-load_nametable:
-	ppulatch nt0
-	ldx #$04
-:
-	ldy #$00
-:
-	lda (tmp0), y
-	sta ppudata
-	iny
-	bne :-	
-	inc tmp0+1
-	dex
-	bne :--
-	rts
-
 ; copy up to $100 bytes of data to ppu memory
 ; tmp0 = source
 ; tmp1 = ppu destination
@@ -126,23 +109,46 @@ copy_ppu:
 	lda tmp1
 	sta ppuaddr
 
-	; block copy the data
-	ldy #$00
+	; copy full pages first
+	ldx #$00	; page index
+	jmp next_page
+:
+	ldy #$00	; byte index
 :
 	lda (tmp0), y
 	sta ppudata
 	iny
+	bne :-	
+	inc tmp0+1	; next page
+	inx
+next_page:
+	cpx tmp2+1
+	bne :--
+	
+	; copy the rest
+	jmp next_byte
+:
+	lda (tmp0), y
+	sta ppudata
+	iny
+next_byte:
 	cpy tmp2
 	bne :-	
 	rts
+
+; copy nametable data to the ppu
+; tmp0 = address
+load_nametable:
+	st16 tmp1, nt0
+	st16 tmp2, $400
+	jmp copy_ppu	
 
 ; copy a background palette into the ppu
 ; tmp0 = address
 load_bg_palette:
 	st16 tmp1, palbg
 load_bg_palette_skip:
-	lda #$10
-	sta tmp2
+	st16 tmp2, $10
 	jmp copy_ppu	
 
 ; copy a foreground palette into the ppu
