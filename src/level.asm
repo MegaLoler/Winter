@@ -32,6 +32,17 @@ enter_level:
 	sta tmp0+1
 	jsr load_bg_palette
 
+	; load the map data
+	ldy #Level::map
+	lda (tmp3), y
+	sta tmp0
+	iny
+	lda (tmp3), y
+	sta tmp0+1
+	st16 tmp1, map
+	st16 tmp2, $400
+	jsr copy
+
 	; load the entity table
 	ldy #Level::entities
 	lda (tmp3), y

@@ -74,6 +74,7 @@ copy:
 	iny
 	bne :-	
 	inc tmp0+1	; next page
+	inc tmp1+1	; next page
 	inx
 @next_page:
 	cpx tmp2+1
