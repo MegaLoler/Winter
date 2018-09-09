@@ -167,6 +167,23 @@ iterate_entities:
 	ror
 	sta tmp4+1
 
+	; get and update the local timer
+	; (more efficient way to do this?)
+	lda entities+Entity::life_timer, y
+	sta tmp5
+	lda entities+Entity::life_timer+1, y
+	sta tmp5+1
+	; incremente it
+	inc tmp5
+	bne :+
+	inc tmp5+1
+:
+	; save it
+	lda tmp5
+	sta entities+Entity::life_timer, y
+	lda tmp5+1
+	sta entities+Entity::life_timer+1, y
+
 	; lookup animation set for this entity
 	lda entities+Entity::identity, y
 	asl
@@ -193,9 +210,8 @@ iterate_entities:
 	iny
 
 	; figure out which frame to draw
-	; TODO: use local timer instead of global timer
-	; TODO: animation speed byte
-	lda global_timer
+	; TODO: variable animation speed maybe?!??!?!??!
+	lda tmp5
 	lsr
 	lsr
 	; modulo
