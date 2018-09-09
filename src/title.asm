@@ -68,8 +68,7 @@ title_handler:
 	and #%00010000
 	beq :+
 	
-	; enter the first level
-	st16 tmp3, lvl::test
-	jsr enter_level
+	; enter next screen
+	jsr enter_bgtest
 :
 	rti

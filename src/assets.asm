@@ -17,6 +17,7 @@
 .scope nt
 	title:			.incbin "title.nam"
 	test:			.incbin "bgtest.nam"
+	test2:			.incbin "bgtest2.nam"
 .endscope
 
 ; maps
@@ -27,15 +28,16 @@
 ; entity tables
 .scope ent
 	test:			.incbin "test.ent"
+	testlvl:		.incbin "testlvl.ent"
 .endscope
 
 ; levels
 .scope lvl
 	test:
-		.word pal::bg::pink
+		.word pal::bg::blue
 		.word pal::fg::main
 		.word map::test
-		.word ent::test
+		.word ent::testlvl
 .endscope
 
 ; metasprites

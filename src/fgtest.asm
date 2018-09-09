@@ -1,55 +1,28 @@
-; setup the level screen
-; tmp3 = level address
-enter_level:
+; enter the foreground (sprite) testing screen
+enter_fgtest:
 	; disable ppu
 	lda #$00
 	sta ppuctrl
 	sta ppumask
 
 	; set the engine state
-	lda #$03
+	lda #$02
 	sta state
 
-	; load the test background nametable
-	st16 tmp0, nt::test
+	; load the test background nametable for this screen
+	st16 tmp0, nt::test2
 	jsr load_nametable
 
 	; load the sprite palette
-	ldy #Level::fg
-	lda (tmp3), y
-	sta tmp0
-	iny
-	lda (tmp3), y
-	sta tmp0+1
+	st16 tmp0, pal::fg::alt
 	jsr load_fg_palette
 
 	; load the bg palette
-	ldy #Level::bg
-	lda (tmp3), y
-	sta tmp0
-	iny
-	lda (tmp3), y
-	sta tmp0+1
+	st16 tmp0, pal::bg::pink
 	jsr load_bg_palette
 
-	; load the map data
-	ldy #Level::map
-	lda (tmp3), y
-	sta tmp0
-	iny
-	lda (tmp3), y
-	sta tmp0+1
-	st16 tmp1, map
-	st16 tmp2, $400
-	jsr copy
-
 	; load the entity table
-	ldy #Level::entities
-	lda (tmp3), y
-	sta tmp0
-	iny
-	lda (tmp3), y
-	sta tmp0+1
+	st16 tmp0, ent::test
 	st16 tmp1, entities
 	st16 tmp2, $100
 	jsr copy
@@ -62,12 +35,12 @@ enter_level:
 	; enable the ppu
 	lda #$88	; enable nmi and use second chr page for sprites
 	sta ppuctrl
-	lda #$18	; show sprites and bg
+	lda #$1a	; show sprites and bg
 	sta ppumask
 	rts
 
-; handler for the level screen
-level_handler:
+; handler for the fg test screen
+fgtest_handler:
 	; copy oam
 	lda #.lobyte(oam)
 	sta oamaddr
@@ -83,8 +56,9 @@ level_handler:
 	and #%00010000
 	beq :+
 	
-	; return to the title screen
-	jsr enter_title
+	; enter the test level
+	st16 tmp3, lvl::test
+	jsr enter_level
 :
 	rti
 
