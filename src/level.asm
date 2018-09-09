@@ -93,6 +93,7 @@ draw_metasprite:
 :
 
 	; copy data
+	jmp :++
 :
 	; copy y pos
 	lda (tmp0), y
@@ -119,26 +120,136 @@ draw_metasprite:
 	inx
 	iny
 	; loop
+:
 	cpy tmp2
-	bne :-	
+	bne :--
 	
 	rts
 
-; assembly oam from entity data
-draw_entities:
-	ldx #$00
-	st16 tmp4, $4030
-	lda #$01
+; assemble oam from entity data
+; as well as updating the game state
+iterate_entities:
+	ldy #$00	; entity pointer
+	ldx #$00	; oam pointer
+@entity_loop:
+	tya
+	pha
+	txa
+	pha
+
+	; get the entity's x position
+	lda entities+Entity::x_pos, y
+	and #$f0
+	sta tmp4
+	lda entities+Entity::x_pos+1, y
+	and #$0f
+	clc
+	adc tmp4
+	ror
+	ror
+	ror
+	ror
+	ror
+	sta tmp4
+
+	; get the entity's y position
+	lda entities+Entity::y_pos, y
+	and #$f0
+	sta tmp4+1
+	lda entities+Entity::y_pos+1, y
+	and #$0f
+	clc
+	adc tmp4+1
+	ror
+	ror
+	ror
+	ror
+	ror
+	sta tmp4+1
+
+	; lookup animation set for this entity
+	lda entities+Entity::identity, y
+	asl
+	tax
+	lda anim::table, x
+	sta tmp0
+	lda anim::table+1, x
+	sta tmp0+1
+
+	; lookup the animation in the set for the entity's current state
+	lda entities+Entity::state, y
+	asl
+	tay
+	lda (tmp0), y
+	sta tmp1
+	iny
+	lda (tmp0), y
+	sta tmp1+1
+
+	; get how many frames there are
+	ldy #$00	; frame pointer
+	lda (tmp1), y	; get frame count
+	sta tmp2
+	iny
+
+	; figure out which frame to draw
+	; TODO: use local timer instead of global timer
+	; TODO: animation speed byte
+	lda global_timer
+	lsr
+	lsr
+	; modulo
+	; modulo seems slow af, probably shouldn't do it this way or somethin?
+:
+	sec
+	sbc tmp2
+	bcs :-
+	clc
+	adc tmp2
+	tax
+	; point to that frame
+:
+	beq :+
+	iny
+	iny
+	iny
+	dex
+	jmp :-
+:		
+
+	; draw that frame
+	pla
+	tax
+	lda (tmp1), y
+	pha
+	iny
+	lda (tmp1), y
+	clc
+	adc tmp4
+	sta tmp4
+	iny
+	lda (tmp1), y
+	clc
+	adc tmp4+1
+	sta tmp4+1
+	pla
 	jsr draw_metasprite
-	st16 tmp4, $3030
-	lda #$02
-	jsr draw_metasprite
-	st16 tmp4, $2030
-	lda #$03
-	jsr draw_metasprite
-	st16 tmp4, $1030
-	lda #$04
-	jsr draw_metasprite
+
+	; loop
+	pla
+	tay
+	iny
+	iny
+	iny
+	iny
+	iny
+	iny
+	iny
+	iny
+	beq :+
+	jmp @entity_loop
+:
+
 	rts
 
 ; handler for the level screen
@@ -151,7 +262,7 @@ level_handler:
 
 	; update oam for next frame
 	jsr clear_oam
-	jsr draw_entities
+	jsr iterate_entities
 
 	; await the start button
 	lda pad_press

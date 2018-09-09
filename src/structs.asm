@@ -1,3 +1,4 @@
+; represents a level
 .struct Level
 	bg		.word
 	fg		.word
@@ -5,6 +6,7 @@
 	entities	.word
 .endstruct
 
+; represents an in-game entity
 .struct Entity
 	identity	.byte
 	state		.byte
@@ -15,13 +17,27 @@
 
 ; an oam entry
 .struct Sprite
-	y_pos		.byte
+	y_off		.byte
 	char		.byte
 	attr		.byte
-	x_pos		.byte
+	x_off		.byte
 .endstruct
 
+; represents a sprite consisting of multiple hardware sprites
 .struct MetaSprite
 	size		.byte		; number of sprites
 	sprites		.tag Sprite	; array of sprites
+.endstruct
+
+; represents a frame of animation
+.struct Frame
+	sprite		.byte		; metasprite id	
+	x_off		.byte		; x offset
+	y_off		.byte		; y offset
+.endstruct
+
+; represents an animated sprite
+.struct Animation
+	length		.byte		; number of animation frames
+	frames		.tag Frame	; array of animation frames
 .endstruct
