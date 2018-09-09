@@ -168,21 +168,11 @@ iterate_entities:
 	sta tmp4+1
 
 	; get and update the local timer
-	; (more efficient way to do this?)
-	lda entities+Entity::life_timer, y
+	ldx entities+Entity::timer, y
+	inx
+	txa
 	sta tmp5
-	lda entities+Entity::life_timer+1, y
-	sta tmp5+1
-	; incremente it
-	inc tmp5
-	bne :+
-	inc tmp5+1
-:
-	; save it
-	lda tmp5
-	sta entities+Entity::life_timer, y
-	lda tmp5+1
-	sta entities+Entity::life_timer+1, y
+	sta entities+Entity::timer, y
 
 	; lookup animation set for this entity
 	lda entities+Entity::identity, y
@@ -194,6 +184,7 @@ iterate_entities:
 	sta tmp0+1
 
 	; lookup the animation in the set for the entity's current state
+	sty tmp7
 	lda entities+Entity::state, y
 	asl
 	tay
@@ -203,29 +194,42 @@ iterate_entities:
 	lda (tmp0), y
 	sta tmp1+1
 
-	; get how many frames there are
+	; figure out which frame to draw
 	ldy #$00	; frame pointer
+
+	; get how many frames there are
 	lda (tmp1), y	; get frame count
 	sta tmp2
 	iny
-
-	; figure out which frame to draw
-	; TODO: variable animation speed maybe?!??!?!??!
-	lda tmp5
-	lsr
-	lsr
-	; modulo
-	; modulo seems slow af, probably shouldn't do it this way or somethin?
+	; and get the speed
+	lda (tmp1), y	; get animation frame duration
+	cmp tmp5	; check for timer overflow
+	bne :+
+	ldy tmp7
+	lda #$00
+	sta entities+Entity::timer, y	
+	sta tmp5
 :
-	sec
-	sbc tmp2
-	bcs :-
-	clc
-	adc tmp2
-	tax
-	; point to that frame
+	; get the animation frame
+	; and point y to that frame
+	ldy tmp7
+	ldx entities+Entity::frame, y
+	lda tmp5
+	cmp #$00
+	bne :++
+	inx
+	cpx tmp2
+	bne :+
+	ldx #$00
+:
+	txa
+	sta entities+Entity::frame, y
+:
+	ldy #$02	; the frame pointer
+	cpx #$00
 :
 	beq :+
+	; skip over a frame
 	iny
 	iny
 	iny

@@ -10,7 +10,8 @@
 .struct Entity
 	identity	.byte
 	state		.byte
-	life_timer	.word
+	frame		.byte
+	timer		.byte
 	x_pos		.word
 	y_pos		.word
 .endstruct
@@ -39,5 +40,6 @@
 ; represents an animated sprite
 .struct Animation
 	length		.byte		; number of animation frames
+	speed		.byte		; number of hardware frames per animation frame
 	frames		.tag Frame	; array of animation frames
 .endstruct
